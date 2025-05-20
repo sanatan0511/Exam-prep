@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🎯 Exam Prep Tracker</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #eef2f5;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+    }
+
+    .form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin: 20px 0;
+    }
+
+    .form input {
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      flex: 1 1 200px;
+    }
+
+    .form button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
+
+    .form button:hover {
+      background-color: #0056b3;
+    }
+
+    .topic-card {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+      position: relative;
+    }
+
+    .topic-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .subject {
+      font-weight: bold;
+      color: #34495e;
+    }
+
+    .tick-boxes {
+      display: flex;
+      gap: 5px;
+      margin-top: 10px;
+    }
+
+    .tick-box {
+      width: 22px;
+      height: 22px;
+      border: 2px solid #007bff;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .tick-box.completed {
+      background-color: #007bff;
+    }
+
+    .timer {
+      font-weight: bold;
+      color: #e74c3c;
+      margin-top: 10px;
+    }
+
+    .start-btn {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .start-btn:hover {
+      background-color: #218838;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📘 Exam Preparation Dashboard</h1>
+    <div class="form">
+      <input type="text" id="subjectInput" placeholder="Subject" />
+      <input type="text" id="topicInput" placeholder="Topic" />
+      <input type="number" id="timeInput" placeholder="Time (minutes)" />
+      <button onclick="addTopic()">Add Topic</button>
+    </div>
+    <div id="topicList"></div>
+  </div>
+
+  <script>
+    let topics = JSON.parse(localStorage.getItem("examTopics")) || [];
+
+    function saveData() {
+      localStorage.setItem("examTopics", JSON.stringify(topics));
+    }
+
+    function renderTopics() {
+      const list = document.getElementById("topicList");
+      list.innerHTML = '';
+
+      topics.forEach((item, index) => {
+        const card = document.createElement("div");
+        card.className = "topic-card";
+
+        card.innerHTML = `
+          <div class="topic-header">
+            <span class="subject">${item.subject} - ${item.topic}</span>
+            <button class="start-btn" onclick="startTimer(${index})">Start Timer</button>
+          </div>
+          <div class="tick-boxes">
+            ${[0, 1, 2].map(i =>
+              `<div class="tick-box ${item.progress > i ? 'completed' : ''}" 
+                onclick="updateProgress(${index}, ${i})"></div>`
+            ).join('')}
+          </div>
+          <div class="timer" id="timer-${index}">
+            ${item.remainingTime ? formatTime(item.remainingTime) : `${item.time} min`}
+          </div>
+        `;
+
+        list.appendChild(card);
+      });
+    }
+
+    function addTopic() {
+      const subject = document.getElementById("subjectInput").value.trim();
+      const topic = document.getElementById("topicInput").value.trim();
+      const time = parseInt(document.getElementById("timeInput").value.trim());
+
+      if (subject && topic && time > 0) {
+        topics.push({
+          subject,
+          topic,
+          time,
+          remainingTime: time * 60,
+          progress: 0
+        });
+        saveData();
+        renderTopics();
+        document.getElementById("subjectInput").value = '';
+        document.getElementById("topicInput").value = '';
+        document.getElementById("timeInput").value = '';
+      } else {
+        alert("Please fill all fields correctly.");
+      }
+    }
+
+    function updateProgress(index, level) {
+      topics[index].progress = level + 1;
+      saveData();
+      renderTopics();
+    }
+
+    function startTimer(index) {
+      let timerDisplay = document.getElementById(`timer-${index}`);
+      let topic = topics[index];
+
+      if (topic.timerId) return; // prevent multiple timers
+
+      topic.timerId = setInterval(() => {
+        if (topic.remainingTime > 0) {
+          topic.remainingTime--;
+          timerDisplay.textContent = formatTime(topic.remainingTime);
+        } else {
+          clearInterval(topic.timerId);
+          topic.timerId = null;
+          alert(`${topic.subject} - ${topic.topic} timer finished!`);
+        }
+        saveData();
+      }, 1000);
+    }
+
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins}m ${secs}s`;
+    }
+
+    renderTopics();
+  </script>
+</body>
+</html>
