@@ -3,17 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>🎯 Exam Prep Tracker</title>
+  <title>🌟 Exam Prep Tracker</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
       background: #eef2f5;
       margin: 0;
       padding: 0;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .dark-mode {
+      background: #1e1e1e;
+      color: #f1f1f1;
     }
 
     .container {
-      max-width: 900px;
+      max-width: 950px;
       margin: 40px auto;
       padding: 20px;
       background: #fff;
@@ -21,12 +27,20 @@
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
     }
 
+    .dark-mode .container {
+      background: #2e2e2e;
+    }
+
     h1 {
       text-align: center;
       color: #2c3e50;
     }
 
-    .form {
+    .dark-mode h1 {
+      color: #f1f1f1;
+    }
+
+    .form, .controls {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
@@ -41,7 +55,7 @@
       flex: 1 1 200px;
     }
 
-    .form button {
+    .form button, .controls button {
       padding: 10px 20px;
       background-color: #007bff;
       color: white;
@@ -51,7 +65,7 @@
       flex: 0 0 auto;
     }
 
-    .form button:hover {
+    .form button:hover, .controls button:hover {
       background-color: #0056b3;
     }
 
@@ -64,10 +78,16 @@
       position: relative;
     }
 
+    .dark-mode .topic-card {
+      background: #3a3a3a;
+      border-color: #555;
+    }
+
     .topic-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
     }
 
     .subject {
@@ -75,54 +95,88 @@
       color: #34495e;
     }
 
-    .tick-boxes {
+    .dark-mode .subject {
+      color: #e0e0e0;
+    }
+
+    .star-boxes {
       display: flex;
       gap: 5px;
-      margin-top: 10px;
+      margin: 10px 0;
     }
 
-    .tick-box {
-      width: 22px;
-      height: 22px;
-      border: 2px solid #007bff;
-      border-radius: 4px;
+    .star {
+      font-size: 24px;
       cursor: pointer;
+      color: #ccc;
+      transition: color 0.3s;
     }
 
-    .tick-box.completed {
-      background-color: #007bff;
+    .star.completed {
+      color: gold;
     }
 
     .timer {
       font-weight: bold;
       color: #e74c3c;
-      margin-top: 10px;
+      margin-top: 5px;
     }
 
-    .start-btn {
+    .start-btn, .delete-btn, .reset-btn {
       background-color: #28a745;
       color: white;
       border: none;
       padding: 5px 10px;
       border-radius: 5px;
       cursor: pointer;
+      margin-left: 5px;
     }
 
-    .start-btn:hover {
-      background-color: #218838;
+    .start-btn:hover { background-color: #218838; }
+    .delete-btn { background-color: #dc3545; }
+    .delete-btn:hover { background-color: #b02a37; }
+    .reset-btn { background-color: #ffc107; color: black; }
+    .reset-btn:hover { background-color: #e0a800; }
+
+    .summary {
+      text-align: center;
+      font-weight: bold;
+      margin: 15px 0;
+      color: #2c3e50;
+    }
+
+    .dark-mode .summary {
+      color: #e0e0e0;
+    }
+
+    .topic-image {
+      max-width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+      margin-top: 10px;
+      border-radius: 6px;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>📘 Exam Preparation Dashboard</h1>
+
+    <div class="controls">
+      <input type="text" id="searchInput" placeholder="Search topics..." oninput="renderTopics()" />
+      <button onclick="toggleDarkMode()">🌙 Toggle Dark Mode</button>
+    </div>
+
     <div class="form">
       <input type="text" id="subjectInput" placeholder="Subject" />
       <input type="text" id="topicInput" placeholder="Topic" />
-      <input type="number" id="timeInput" placeholder="Time (minutes)" />
-      <button onclick="addTopic()">Add Topic</button>
+      <input type="number" id="timeInput" placeholder="Time (min)" />
+      <input type="file" id="imageInput" accept="image/*" />
+      <button onclick="addTopic()">➕ Add Topic</button>
     </div>
+
     <div id="topicList"></div>
+    <div class="summary" id="timeSummary"></div>
   </div>
 
   <script>
@@ -134,53 +188,94 @@
 
     function renderTopics() {
       const list = document.getElementById("topicList");
+      const search = document.getElementById("searchInput").value.toLowerCase();
       list.innerHTML = '';
+      let totalRemaining = 0;
+      let totalSaved = 0;
 
       topics.forEach((item, index) => {
-        const card = document.createElement("div");
-        card.className = "topic-card";
+        if (item.subject.toLowerCase().includes(search) || item.topic.toLowerCase().includes(search)) {
+          const card = document.createElement("div");
+          card.className = "topic-card";
 
-        card.innerHTML = `
-          <div class="topic-header">
-            <span class="subject">${item.subject} - ${item.topic}</span>
-            <button class="start-btn" onclick="startTimer(${index})">Start Timer</button>
-          </div>
-          <div class="tick-boxes">
-            ${[0, 1, 2].map(i =>
-              `<div class="tick-box ${item.progress > i ? 'completed' : ''}" 
-                onclick="updateProgress(${index}, ${i})"></div>`
-            ).join('')}
-          </div>
-          <div class="timer" id="timer-${index}">
-            ${item.remainingTime ? formatTime(item.remainingTime) : `${item.time} min`}
-          </div>
-        `;
+          totalRemaining += Math.ceil(item.remainingTime / 60);
+          totalSaved += Math.ceil((item.time * item.progress / 3) - (item.remainingTime / 60));
 
-        list.appendChild(card);
+          card.innerHTML = `
+            <div class="topic-header">
+              <span class="subject">${item.subject} - ${item.topic}</span>
+              <div>
+                <button class="start-btn" onclick="startTimer(${index})">▶ Start</button>
+                <button class="reset-btn" onclick="resetProgress(${index})">↺ Reset</button>
+                <button class="delete-btn" onclick="deleteTopic(${index})">🗑 Delete</button>
+              </div>
+            </div>
+
+            <div class="star-boxes">
+              ${[0, 1, 2].map(i =>
+                `<span class="star ${item.progress > i ? 'completed' : ''}" 
+                  onclick="updateProgress(${index}, ${i})">★</span>`
+              ).join('')}
+            </div>
+
+            <div class="timer" id="timer-${index}">
+              ${item.remainingTime ? formatTime(item.remainingTime) : `${item.time} min`}
+            </div>
+            ${item.image ? `<img src="${item.image}" class="topic-image"/>` : ''}
+          `;
+          list.appendChild(card);
+        }
       });
+
+      document.getElementById("timeSummary").innerHTML =
+        `⏳ Remaining: ${totalRemaining} min &nbsp;&nbsp;🌟 Time Saved: ${totalSaved} min`;
     }
 
     function addTopic() {
       const subject = document.getElementById("subjectInput").value.trim();
       const topic = document.getElementById("topicInput").value.trim();
       const time = parseInt(document.getElementById("timeInput").value.trim());
+      const imageFile = document.getElementById("imageInput").files[0];
 
-      if (subject && topic && time > 0) {
+      if (!subject || !topic || isNaN(time) || time <= 0) {
+        alert("❗ Please fill in all fields correctly.");
+        return;
+      }
+
+      if (imageFile) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          topics.push({
+            subject,
+            topic,
+            time,
+            remainingTime: time * 60,
+            progress: 0,
+            timerId: null,
+            image: e.target.result
+          });
+          saveData();
+          renderTopics();
+        };
+        reader.readAsDataURL(imageFile);
+      } else {
         topics.push({
           subject,
           topic,
           time,
           remainingTime: time * 60,
-          progress: 0
+          progress: 0,
+          timerId: null,
+          image: null
         });
         saveData();
         renderTopics();
-        document.getElementById("subjectInput").value = '';
-        document.getElementById("topicInput").value = '';
-        document.getElementById("timeInput").value = '';
-      } else {
-        alert("Please fill all fields correctly.");
       }
+
+      document.getElementById("subjectInput").value = '';
+      document.getElementById("topicInput").value = '';
+      document.getElementById("timeInput").value = '';
+      document.getElementById("imageInput").value = '';
     }
 
     function updateProgress(index, level) {
@@ -189,11 +284,28 @@
       renderTopics();
     }
 
+    function resetProgress(index) {
+      topics[index].progress = 0;
+      topics[index].remainingTime = topics[index].time * 60;
+      clearInterval(topics[index].timerId);
+      topics[index].timerId = null;
+      saveData();
+      renderTopics();
+    }
+
+    function deleteTopic(index) {
+      if (confirm("Are you sure you want to delete this topic?")) {
+        clearInterval(topics[index].timerId);
+        topics.splice(index, 1);
+        saveData();
+        renderTopics();
+      }
+    }
+
     function startTimer(index) {
       let timerDisplay = document.getElementById(`timer-${index}`);
       let topic = topics[index];
-
-      if (topic.timerId) return; // prevent multiple timers
+      if (topic.timerId) return;
 
       topic.timerId = setInterval(() => {
         if (topic.remainingTime > 0) {
@@ -202,7 +314,7 @@
         } else {
           clearInterval(topic.timerId);
           topic.timerId = null;
-          alert(`${topic.subject} - ${topic.topic} timer finished!`);
+          alert(`✅ ${topic.subject} - ${topic.topic} timer finished!`);
         }
         saveData();
       }, 1000);
@@ -211,7 +323,11 @@
     function formatTime(seconds) {
       const mins = Math.floor(seconds / 60);
       const secs = seconds % 60;
-      return `${mins}m ${secs}s`;
+      return `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark-mode");
     }
 
     renderTopics();
